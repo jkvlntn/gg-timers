@@ -19,7 +19,8 @@ router.post("/reset", (req, res, next) => {
 
 router.post("/time", (req, res, next) => {
   const timeRemaining = timer.getTimeRemaining();
-  res.status(200).json({ time: timeRemaining });
+  const paused = timer.isPaused();
+  res.status(200).json({ time: timeRemaining, paused: paused });
 });
 
 module.exports = router;
