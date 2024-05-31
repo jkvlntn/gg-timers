@@ -9,7 +9,7 @@ const Timer = class {
     this.paused = false;
     this.interval = setInterval(() => {
       this.timeRemaining -= 1;
-      console.log("decreasing timer " + this.timeRemaining);
+      console.log("time on server: " + this.timeRemaining);
     }, 1000);
   }
   pause() {
@@ -17,8 +17,9 @@ const Timer = class {
     this.interval = clearInterval(this.interval);
   }
   reset() {
-    this.timeRemaining = this.initialTime;
+    this.paused = true;
     this.interval = clearInterval(this.interval);
+    this.timeRemaining = this.initialTime;
   }
   getTimeRemaining() {
     return this.timeRemaining;
