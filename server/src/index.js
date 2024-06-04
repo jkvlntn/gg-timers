@@ -1,15 +1,17 @@
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-const socketIO = require("socket.io");
-const timerRoutes = require("./routes/timerRoutes");
+const { initializeSocket } = require("./socket");
+const timerRoutes = require("./timerRoutes");
+const Bot = require("./bot");
+require("dotenv").config();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+initializeSocket(server);
 
-const SERVER_PORT = 8000;
-const WEB_PORT = 3000;
+const SERVER_PORT = process.env.SERVER_PORT || 8000;
+const WEB_PORT = process.env.WEB_PORT || 3000;
 
 app.use(
   cors({
@@ -20,15 +22,8 @@ app.use(
   })
 );
 
-// app.use(express.json());
-
 app.use((req, res, next) => {
   console.log(`${req.method} : ${req.url}`);
-  if (req.method == "POST") {
-    req.emit = (e) => {
-      io.emit(e);
-    };
-  }
   next();
 });
 
@@ -37,3 +32,5 @@ app.use("/timer", timerRoutes);
 server.listen(SERVER_PORT, () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 });
+
+const bot1 = new Bot(process.env.DISCORD1_TOKEN, process.env.DISCORD1_ID);

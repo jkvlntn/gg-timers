@@ -1,22 +1,23 @@
 const { Router } = require("express");
 const router = Router();
-const timer = require("../objects/timerInstance");
+const timer = require("./timer");
+const { emitSocket } = require("./socket");
 
 router.post("/start", (req, res, next) => {
   timer.start();
-  req.emit("update");
+  emitSocket("update");
   res.status(200).send();
 });
 
 router.post("/pause", (req, res, next) => {
   timer.pause();
-  req.emit("update");
+  emitSocket("update");
   res.status(200).send();
 });
 
 router.post("/reset", (req, res, next) => {
   timer.reset();
-  req.emit("update");
+  emitSocket("update");
   res.status(200).send();
 });
 

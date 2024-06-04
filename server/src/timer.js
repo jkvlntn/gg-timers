@@ -29,4 +29,4 @@ const Timer = class {
   }
 };
 
-module.exports = Timer;
+module.exports = new Timer(15 * 60);
