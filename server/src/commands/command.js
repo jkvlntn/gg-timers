@@ -6,7 +6,6 @@ class Command {
     this.data.setName(name);
     this.data.setDescription(description);
   }
-  async run() {}
 }
 
 module.exports = Command;

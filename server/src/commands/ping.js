@@ -5,7 +5,7 @@ class PingCommand extends Command {
     super("ping", "replies with pong");
   }
   async run(interaction) {
-    await interaction.reply("pong");
+    await interaction.reply({ content: "pong", ephemeral: true });
   }
 }
 

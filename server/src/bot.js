@@ -6,12 +6,23 @@ const {
   Routes,
 } = require("discord.js");
 const pingCommand = require("./commands/ping");
+const startCommand = require("./commands/start");
+const pauseCommand = require("./commands/pause");
+const resetCommand = require("./commands/reset");
 
 class Bot {
   static availableCommands = {
     [pingCommand.data.name]: pingCommand,
+    [startCommand.data.name]: startCommand,
+    [pauseCommand.data.name]: pauseCommand,
+    [resetCommand.data.name]: resetCommand,
   };
-  static availableCommandsExport = [pingCommand.data.toJSON()];
+  static availableCommandsExport = [
+    pingCommand.data.toJSON(),
+    startCommand.data.toJSON(),
+    pauseCommand.data.toJSON(),
+    resetCommand.data.toJSON(),
+  ];
 
   constructor(token, id) {
     this.token = token;
@@ -33,17 +44,12 @@ class Bot {
     });
 
     this.client.on(Events.InteractionCreate, (interaction) => {
-      console.log("running a command");
       const commandToRun = Bot.availableCommands[interaction.commandName];
       if (!commandToRun) {
         interaction.reply("unknown command");
         return;
       }
       commandToRun.run(interaction);
-    });
-
-    this.client.on(Events.MessageCreate, (interaction) => {
-      console.log(interaction.content);
     });
 
     this.registerClient();
@@ -62,7 +68,9 @@ class Bot {
       .put(Routes.applicationCommands(this.id), {
         body: Bot.availableCommandsExport,
       })
-      .catch("Could not Register Commands");
+      .catch((error) => {
+        console.log(error);
+      });
   }
 }
 

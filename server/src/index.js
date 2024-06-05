@@ -34,3 +34,4 @@ server.listen(SERVER_PORT, () => {
 });
 
 const bot1 = new Bot(process.env.DISCORD1_TOKEN, process.env.DISCORD1_ID);
+const bot2 = new Bot(process.env.DISCORD2_TOKEN, process.env.DISCORD2_ID);
