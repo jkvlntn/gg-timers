@@ -2,8 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { initializeSocket } = require("./socket");
-const timerRoutes = require("./timerRoutes");
 const Bot = require("./bot");
+const Timer = require("./timer");
 require("dotenv").config();
 
 const app = express();
@@ -27,11 +27,26 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/timer", timerRoutes);
+app.get("/timer/time", (req, res, next) => {
+  const timeRemaining = timer.getTimeRemaining();
+  const paused = timer.isPaused();
+  res.status(200).json({ time: timeRemaining, paused: paused });
+});
 
 server.listen(SERVER_PORT, () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 });
 
-const bot1 = new Bot(process.env.DISCORD1_TOKEN, process.env.DISCORD1_ID);
-const bot2 = new Bot(process.env.DISCORD2_TOKEN, process.env.DISCORD2_ID);
+const timer = new Timer(15 * 60);
+const bot1 = new Bot(
+  process.env.DISCORD1_TOKEN,
+  process.env.DISCORD1_ID,
+  timer
+);
+const bot2 = new Bot(
+  process.env.DISCORD2_TOKEN,
+  process.env.DISCORD2_ID,
+  timer
+);
+timer.registerBot(bot1);
+timer.registerBot(bot2);

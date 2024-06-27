@@ -5,28 +5,14 @@ const {
   REST,
   Routes,
 } = require("discord.js");
-const pingCommand = require("./commands/ping");
-const startCommand = require("./commands/start");
-const pauseCommand = require("./commands/pause");
-const resetCommand = require("./commands/reset");
+const { emitSocket } = require("./socket");
+const commandsExports = require("./commands");
 
 class Bot {
-  static availableCommands = {
-    [pingCommand.data.name]: pingCommand,
-    [startCommand.data.name]: startCommand,
-    [pauseCommand.data.name]: pauseCommand,
-    [resetCommand.data.name]: resetCommand,
-  };
-  static availableCommandsExport = [
-    pingCommand.data.toJSON(),
-    startCommand.data.toJSON(),
-    pauseCommand.data.toJSON(),
-    resetCommand.data.toJSON(),
-  ];
-
-  constructor(token, id) {
+  constructor(token, id, timer) {
     this.token = token;
     this.id = id;
+    this.timer = timer;
 
     this.client = new Client({
       intents: [
@@ -44,12 +30,20 @@ class Bot {
     });
 
     this.client.on(Events.InteractionCreate, (interaction) => {
-      const commandToRun = Bot.availableCommands[interaction.commandName];
-      if (!commandToRun) {
-        interaction.reply("unknown command");
-        return;
+      const command = interaction.commandName;
+      switch (command) {
+        case "start":
+          this.startCommand(interaction);
+          break;
+        case "pause":
+          this.pauseCommand(interaction);
+          break;
+        case "reset":
+          this.resetCommand(interaction);
+          break;
+        default:
+          interaction.reply("unknown command");
       }
-      commandToRun.run(interaction);
     });
 
     this.registerClient();
@@ -62,11 +56,56 @@ class Bot {
     });
   }
 
+  async startCommand(interaction) {
+    await interaction.reply({
+      content: `Starting timer: ${Math.floor(
+        this.timer.getTimeRemaining() / 60
+      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      ephemeral: true,
+    });
+    this.timer.start();
+    emitSocket("update");
+  }
+
+  async pauseCommand(interaction) {
+    this.timer.pause();
+    emitSocket("update");
+    await interaction.reply({
+      content: `Pausing timer: ${Math.floor(
+        this.timer.getTimeRemaining() / 60
+      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      ephemeral: true,
+    });
+  }
+
+  async resetCommand(interaction) {
+    this.timer.reset();
+    emitSocket("update");
+    await interaction.reply({
+      content: `Resetting timer: ${Math.floor(
+        this.timer.getTimeRemaining() / 60
+      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      ephemeral: true,
+    });
+  }
+
+  startVoiceLine() {
+    console.log("starting voice line");
+  }
+
+  pauseVoiceLine() {
+    console.log("pausing voice line");
+  }
+
+  finishedVoiceLine() {
+    console.log("finished voice line");
+  }
+
   registerCommands() {
     console.log("Registering Commands");
     this.rest
       .put(Routes.applicationCommands(this.id), {
-        body: Bot.availableCommandsExport,
+        body: commandsExports,
       })
       .catch((error) => {
         console.log(error);
