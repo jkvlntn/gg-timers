@@ -5,6 +5,7 @@ const {
   REST,
   Routes,
 } = require("discord.js");
+const { joinVoiceChannel } = require("@discordjs/voice");
 const { emitSocket } = require("./socket");
 const commandsExports = require("./commands");
 
@@ -13,6 +14,7 @@ class Bot {
     this.token = token;
     this.id = id;
     this.timer = timer;
+    this.connection = null;
 
     this.client = new Client({
       intents: [
@@ -20,6 +22,8 @@ class Bot {
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildPresences,
       ],
     });
 
@@ -40,6 +44,12 @@ class Bot {
           break;
         case "reset":
           this.resetCommand(interaction);
+          break;
+        case "set":
+          this.setCommand(interaction);
+          break;
+        case "join":
+          this.joinCommand(interaction);
           break;
         default:
           interaction.reply("unknown command");
@@ -89,6 +99,44 @@ class Bot {
     });
   }
 
+  async setCommand(interaction) {
+    const minutes = interaction.options.getInteger("minutes");
+    const seconds = interaction.options.getInteger("seconds");
+    this.timer.set(minutes * 60 + seconds);
+    emitSocket("update");
+    await interaction.reply({
+      content: `Resetting timer: ${Math.floor(
+        this.timer.getTimeRemaining() / 60
+      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      ephemeral: true,
+    });
+  }
+
+  async joinCommand(interaction) {
+    const channel = interaction.member.voice.channel;
+    if (!channel) {
+      await interaction.reply({
+        content: "You must be in a voice channel",
+        ephemeral: true,
+      });
+      return;
+    }
+    try {
+      this.connection = joinVoiceChannel({
+        channelId: channel.id,
+        guildId: interaction.guild.id,
+        group: this.client.user.id,
+        adapterCreator: interaction.guild.voiceAdapterCreator,
+      });
+      await interaction.reply({
+        content: `Joining ${channel.name}`,
+        ephemeral: true,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   startVoiceLine() {
     console.log("starting voice line");
   }
@@ -102,7 +150,6 @@ class Bot {
   }
 
   registerCommands() {
-    console.log("Registering Commands");
     this.rest
       .put(Routes.applicationCommands(this.id), {
         body: commandsExports,

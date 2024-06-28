@@ -12,5 +12,24 @@ const addCommandData = (name, description) => {
 addCommandData("start", "Starts the timer");
 addCommandData("pause", "Pauses the timer");
 addCommandData("reset", "Resets the timer");
+addCommandData("join", "Joins vc of sender");
+
+const setCommand = new SlashCommandBuilder();
+setCommand
+  .setName("set")
+  .setDescription("Sets the timer to a certain time")
+  .addIntegerOption((option) => {
+    return option
+      .setName("minutes")
+      .setDescription("minutes on timer")
+      .setRequired(true);
+  })
+  .addIntegerOption((option) => {
+    return option
+      .setName("seconds")
+      .setDescription("seconds on timer")
+      .setRequired(true);
+  });
+commandsExports.push(setCommand);
 
 module.exports = commandsExports;
