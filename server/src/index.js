@@ -48,5 +48,5 @@ const bot2 = new Bot(
   process.env.DISCORD2_ID,
   timer
 );
-timer.registerBot(bot1);
-timer.registerBot(bot2);
+// timer.registerBot(bot1);
+// timer.registerBot(bot2);

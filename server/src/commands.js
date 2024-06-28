@@ -13,6 +13,7 @@ addCommandData("start", "Starts the timer");
 addCommandData("pause", "Pauses the timer");
 addCommandData("reset", "Resets the timer");
 addCommandData("join", "Joins vc of sender");
+addCommandData("embed", "Shows an embed for the timer");
 
 const setCommand = new SlashCommandBuilder();
 setCommand
