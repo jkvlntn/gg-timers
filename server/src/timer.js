@@ -9,7 +9,10 @@ const Timer = class {
   registerBot(bot) {
     this.bots.push(bot);
   }
-  start() {
+  start(onFinish) {
+    if (!this.paused) {
+      return;
+    }
     for (let x = 0; x < this.bots.length; x++) {
       this.bots[x].startVoiceLine();
     }
@@ -18,14 +21,19 @@ const Timer = class {
       this.timeRemaining -= 1;
       console.log("time on server: " + this.timeRemaining);
       if (this.timeRemaining == 0) {
+        this.paused = true;
+        this.interval = clearInterval(this.interval);
         for (let x = 0; x < this.bots.length; x++) {
-          this.paused = true;
-          this.bots[x].finishVoiceLine();
+          this.bots[x].finishedVoiceLine();
         }
+        onFinish();
       }
     }, 1000);
   }
   pause() {
+    if (this.paused) {
+      return;
+    }
     this.paused = true;
     this.interval = clearInterval(this.interval);
     for (let x = 0; x < this.bots.length; x++) {

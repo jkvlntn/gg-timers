@@ -5,7 +5,11 @@ const {
   REST,
   Routes,
 } = require("discord.js");
-const { joinVoiceChannel } = require("@discordjs/voice");
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+} = require("@discordjs/voice");
 const { emitSocket } = require("./socket");
 const commandsExports = require("./commands");
 
@@ -15,6 +19,7 @@ class Bot {
     this.id = id;
     this.timer = timer;
     this.connection = null;
+    this.audioPlayer = createAudioPlayer();
 
     this.client = new Client({
       intents: [
@@ -73,7 +78,9 @@ class Bot {
       )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
       ephemeral: true,
     });
-    this.timer.start();
+    this.timer.start(() => {
+      emitSocket("update");
+    });
     emitSocket("update");
   }
 
@@ -138,15 +145,31 @@ class Bot {
   }
 
   startVoiceLine() {
-    console.log("starting voice line");
+    if (!this.connection) {
+      return;
+    }
+    console.log("saying voice line");
+    const resource = createAudioResource("./audio/start.mp3");
+    this.audioPlayer.play(resource);
+    this.connection.subscribe(this.audioPlayer);
   }
 
   pauseVoiceLine() {
-    console.log("pausing voice line");
+    if (!this.connection) {
+      return;
+    }
+    const resource = createAudioResource("./audio/pause.mp3");
+    this.audioPlayer.play(resource);
+    this.connection.subscribe(this.audioPlayer);
   }
 
   finishedVoiceLine() {
-    console.log("finished voice line");
+    if (!this.connection) {
+      return;
+    }
+    const resource = createAudioResource("./audio/finished.mp3");
+    this.audioPlayer.play(resource);
+    this.connection.subscribe(this.audioPlayer);
   }
 
   registerCommands() {
