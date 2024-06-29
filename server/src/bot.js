@@ -120,13 +120,27 @@ class Bot {
   }
 
   async joinCommand(interaction) {
-    const channel = interaction.member.voice.channel;
-    if (!channel) {
-      await interaction.reply({
-        content: "You must be in a voice channel",
-        ephemeral: true,
-      });
-      return;
+    let channel;
+    const user = interaction.options.getUser("user");
+    if (user) {
+      const userToJoin = await interaction.guild.members.fetch(user.id);
+      channel = userToJoin.voice.channel;
+      if (!channel) {
+        await interaction.reply({
+          content: `${userToJoin.nickname} is not in a vc`,
+          ephemeral: true,
+        });
+        return;
+      }
+    } else {
+      channel = interaction.member.voice.channel;
+      if (!channel) {
+        await interaction.reply({
+          content: "You must be in a voice channel",
+          ephemeral: true,
+        });
+        return;
+      }
     }
     try {
       this.voiceConnection = joinVoiceChannel({
@@ -150,7 +164,7 @@ class Bot {
       content: "Sending timer embed",
       ephemeral: true,
     });
-    this.embed.setTitle("Timer");
+    this.embed.setTitle(`Timer - ${this.timer.getIdentifier()}`);
     this.embed.setDescription(
       `Time Remaining: ${Math.floor(
         this.timer.getTimeRemaining() / 60

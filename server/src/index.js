@@ -28,8 +28,8 @@ app.use((req, res, next) => {
 });
 
 app.get("/timer/time", (req, res, next) => {
-  const timeRemaining = timer.getTimeRemaining();
-  const paused = timer.isPaused();
+  const timeRemaining = timer1.getTimeRemaining();
+  const paused = timer1.isPaused();
   res.status(200).json({ time: timeRemaining, paused: paused });
 });
 
@@ -37,16 +37,17 @@ server.listen(SERVER_PORT, () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 });
 
-const timer = new Timer(15 * 60);
+const timer1 = new Timer("Match 1", 15 * 60);
+const timer2 = new Timer("Match 2", 10 * 60);
 const bot1 = new Bot(
   process.env.DISCORD1_TOKEN,
   process.env.DISCORD1_ID,
-  timer
+  timer1
 );
 const bot2 = new Bot(
   process.env.DISCORD2_TOKEN,
   process.env.DISCORD2_ID,
-  timer
+  timer1
 );
 // timer.registerBot(bot1);
 // timer.registerBot(bot2);

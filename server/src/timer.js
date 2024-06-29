@@ -1,7 +1,8 @@
 const { emitSocket } = require("./socket");
 
 const Timer = class {
-  constructor(initialTime) {
+  constructor(identifier, initialTime) {
+    this.identifier = identifier;
     this.initialTime = initialTime;
     this.timeRemaining = initialTime;
     this.paused = true;
@@ -30,6 +31,7 @@ const Timer = class {
         this.interval = clearInterval(this.interval);
         emitSocket("update");
         for (let x = 0; x < this.bots.length; x++) {
+          this.bots[x].updateEmbed();
           this.bots[x].finishedVoiceLine();
         }
       }
@@ -44,6 +46,7 @@ const Timer = class {
     this.interval = clearInterval(this.interval);
     emitSocket("update");
     for (let x = 0; x < this.bots.length; x++) {
+      this.bots[x].updateEmbed();
       this.bots[x].pauseVoiceLine();
     }
   }
@@ -51,13 +54,22 @@ const Timer = class {
     this.paused = true;
     this.interval = clearInterval(this.interval);
     this.timeRemaining = this.initialTime;
+    for (let x = 0; x < this.bots.length; x++) {
+      this.bots[x].updateEmbed();
+    }
     emitSocket("update");
   }
   set(timeToSet) {
     this.paused = true;
     this.interval = clearInterval(this.interval);
     this.timeRemaining = timeToSet;
+    for (let x = 0; x < this.bots.length; x++) {
+      this.bots[x].updateEmbed();
+    }
     emitSocket("update");
+  }
+  getIdentifier() {
+    return this.identifier;
   }
   getTimeRemaining() {
     return this.timeRemaining;
