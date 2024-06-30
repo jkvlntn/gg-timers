@@ -67,6 +67,18 @@ class Bot {
       }
     });
 
+    this.client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+      if (this.client.user.id !== newState.id) {
+        return;
+      }
+      if (newState.channelId === null) {
+        if (this.voiceConnection) {
+          this.voiceConnection.destroy();
+        }
+        this.voiceConnection = null;
+      }
+    });
+
     this.registerClient();
     this.registerCommands();
   }
@@ -149,6 +161,7 @@ class Bot {
         group: this.client.user.id,
         adapterCreator: interaction.guild.voiceAdapterCreator,
       });
+      this.voiceConnection.subscribe(this.audioPlayer);
       await interaction.reply({
         content: `Joining ${channel.name}`,
         ephemeral: true,
@@ -182,7 +195,6 @@ class Bot {
     try {
       const resource = createAudioResource("./audio/start.mp3");
       this.audioPlayer.play(resource);
-      this.voiceConnection.subscribe(this.audioPlayer);
     } catch (error) {
       console.log("Could not play audio (was bot disconnected?)");
       this.voiceConnection = null;
@@ -196,7 +208,6 @@ class Bot {
     try {
       const resource = createAudioResource("./audio/pause.mp3");
       this.audioPlayer.play(resource);
-      this.voiceConnection.subscribe(this.audioPlayer);
     } catch (error) {
       console.log("Could not play audio (was bot disconnected?)");
       this.voiceConnection = null;
@@ -210,7 +221,6 @@ class Bot {
     try {
       const resource = createAudioResource("./audio/finished.mp3");
       this.audioPlayer.play(resource);
-      this.voiceConnection.subscribe(this.audioPlayer);
     } catch (error) {
       console.log("Could not play audio (was bot disconnected?)");
       this.voiceConnection = null;
