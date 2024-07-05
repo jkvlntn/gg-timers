@@ -1,42 +1,27 @@
-const { emitSocket } = require("./socket");
-
 const Timer = class {
-  constructor(identifier, initialTime) {
-    this.identifier = identifier;
+  constructor(initialTime, updateCallback, finishedCallback) {
     this.initialTime = initialTime;
+    this.updateCallback = updateCallback;
+    this.finishedCallback = finishedCallback;
     this.timeRemaining = initialTime;
     this.paused = true;
     this.interval = null;
-    this.bots = [];
-  }
-  registerBot(bot) {
-    this.bots.push(bot);
   }
   start() {
     if (!this.paused || this.timeRemaining <= 0) {
       return;
     }
-    for (let x = 0; x < this.bots.length; x++) {
-      this.bots[x].startVoiceLine();
-    }
     this.paused = false;
     this.interval = setInterval(() => {
       this.timeRemaining -= 1;
-      for (let x = 0; x < this.bots.length; x++) {
-        this.bots[x].updateEmbed();
-      }
+      this.updateCallback();
       console.log("time on server: " + this.timeRemaining);
-      if (this.timeRemaining == 0) {
+      if (this.timeRemaining === 0) {
         this.paused = true;
         this.interval = clearInterval(this.interval);
-        emitSocket("update");
-        for (let x = 0; x < this.bots.length; x++) {
-          this.bots[x].updateEmbed();
-          this.bots[x].finishedVoiceLine();
-        }
+        this.finishedCallback();
       }
     }, 1000);
-    emitSocket("update");
   }
   pause() {
     if (this.paused) {
@@ -44,35 +29,25 @@ const Timer = class {
     }
     this.paused = true;
     this.interval = clearInterval(this.interval);
-    emitSocket("update");
-    for (let x = 0; x < this.bots.length; x++) {
-      this.bots[x].updateEmbed();
-      this.bots[x].pauseVoiceLine();
-    }
   }
   reset() {
     this.paused = true;
     this.interval = clearInterval(this.interval);
     this.timeRemaining = this.initialTime;
-    for (let x = 0; x < this.bots.length; x++) {
-      this.bots[x].updateEmbed();
-    }
-    emitSocket("update");
   }
   set(timeToSet) {
     this.paused = true;
     this.interval = clearInterval(this.interval);
     this.timeRemaining = timeToSet;
-    for (let x = 0; x < this.bots.length; x++) {
-      this.bots[x].updateEmbed();
-    }
-    emitSocket("update");
-  }
-  getIdentifier() {
-    return this.identifier;
   }
   getTimeRemaining() {
     return this.timeRemaining;
+  }
+  getMinutesRemaining() {
+    return Math.floor(this.timeRemaining / 60);
+  }
+  getSecondsRemaining() {
+    return this.timeRemaining % 60;
   }
   isPaused() {
     return this.paused;

@@ -14,11 +14,12 @@ const {
 const commandsExports = require("./commands");
 
 class Bot {
-  constructor(token, id, timer) {
+  constructor(controller, token, id, defaultChannelId) {
+    this.controller = controller;
+    this.controller.registerBot(this);
     this.token = token;
     this.id = id;
-    this.timer = timer;
-    this.timer.registerBot(this);
+    this.defaultChannelId = defaultChannelId;
     this.voiceConnection = null;
     this.audioPlayer = createAudioPlayer();
     this.embed = new EmbedBuilder();
@@ -59,6 +60,9 @@ class Bot {
         case "join":
           this.joinCommand(interaction);
           break;
+        case "initialize":
+          this.initializeCommand(interaction);
+          break;
         case "embed":
           this.embedCommand(interaction);
           break;
@@ -91,30 +95,24 @@ class Bot {
 
   async startCommand(interaction) {
     await interaction.reply({
-      content: `Starting timer: ${Math.floor(
-        this.timer.getTimeRemaining() / 60
-      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      content: `Starting timer: ${this.controller.getIdentifier()}`,
       ephemeral: true,
     });
-    this.timer.start();
+    this.controller.start();
   }
 
   async pauseCommand(interaction) {
-    this.timer.pause();
+    this.controller.pause();
     await interaction.reply({
-      content: `Pausing timer: ${Math.floor(
-        this.timer.getTimeRemaining() / 60
-      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      content: `Pausing timer: ${this.controller.getIdentifier()}`,
       ephemeral: true,
     });
   }
 
   async resetCommand(interaction) {
-    this.timer.reset();
+    this.controller.reset();
     await interaction.reply({
-      content: `Resetting timer: ${Math.floor(
-        this.timer.getTimeRemaining() / 60
-      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      content: `Resetting timer: ${this.controller.getIdentifier()}`,
       ephemeral: true,
     });
   }
@@ -122,11 +120,9 @@ class Bot {
   async setCommand(interaction) {
     const minutes = interaction.options.getInteger("minutes");
     const seconds = interaction.options.getInteger("seconds");
-    this.timer.set(minutes * 60 + seconds);
+    this.controller.set(minutes * 60 + seconds);
     await interaction.reply({
-      content: `Resetting timer: ${Math.floor(
-        this.timer.getTimeRemaining() / 60
-      )} minutes ${this.timer.getTimeRemaining() % 60} seconds remaining`,
+      content: `Setting timer: ${this.controller.getIdentifier()}`,
       ephemeral: true,
     });
   }
@@ -139,7 +135,9 @@ class Bot {
       channel = userToJoin.voice.channel;
       if (!channel) {
         await interaction.reply({
-          content: `${userToJoin.nickname} is not in a vc`,
+          content: `${
+            userToJoin.user.nickname || userToJoin.user.globalName
+          } is not in a voice channel`,
           ephemeral: true,
         });
         return;
@@ -172,59 +170,44 @@ class Bot {
     }
   }
 
+  async initializeCommand(interaction) {
+    await interaction.reply({
+      content: `Initializing bots for ${this.controller.getIdentifier()}`,
+      ephemeral: true,
+    });
+    this.controller.initializeAll();
+  }
+
+  async initialize() {
+    const channel = await this.client.channels.fetch(this.defaultChannelId);
+    this.setEmbedToCurrentTime();
+    this.embedMessage = await channel.send({
+      embeds: [this.embed],
+    });
+    this.voiceConnection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: channel.guild.id,
+      group: this.client.user.id,
+      adapterCreator: channel.guild.voiceAdapterCreator,
+    });
+  }
+
+  setEmbedToCurrentTime() {
+    this.embed.setTitle(`Timer - ${this.controller.getIdentifier()}`);
+    this.embed.setDescription(
+      `Time Remaining: ${this.controller.getTimeString()}`
+    );
+  }
+
   async embedCommand(interaction) {
     interaction.reply({
       content: "Sending timer embed",
       ephemeral: true,
     });
-    this.embed.setTitle(`Timer - ${this.timer.getIdentifier()}`);
-    this.embed.setDescription(
-      `Time Remaining: ${Math.floor(
-        this.timer.getTimeRemaining() / 60
-      )} minutes ${this.timer.getTimeRemaining() % 60} seconds`
-    );
+    this.setEmbedToCurrentTime();
     this.embedMessage = await interaction.channel.send({
       embeds: [this.embed],
     });
-  }
-
-  startVoiceLine() {
-    if (!this.voiceConnection) {
-      return;
-    }
-    try {
-      const resource = createAudioResource("./audio/start.mp3");
-      this.audioPlayer.play(resource);
-    } catch (error) {
-      console.log("Could not play audio (was bot disconnected?)");
-      this.voiceConnection = null;
-    }
-  }
-
-  pauseVoiceLine() {
-    if (!this.voiceConnection) {
-      return;
-    }
-    try {
-      const resource = createAudioResource("./audio/pause.mp3");
-      this.audioPlayer.play(resource);
-    } catch (error) {
-      console.log("Could not play audio (was bot disconnected?)");
-      this.voiceConnection = null;
-    }
-  }
-
-  finishedVoiceLine() {
-    if (!this.voiceConnection) {
-      return;
-    }
-    try {
-      const resource = createAudioResource("./audio/finished.mp3");
-      this.audioPlayer.play(resource);
-    } catch (error) {
-      console.log("Could not play audio (was bot disconnected?)");
-      this.voiceConnection = null;
-    }
   }
 
   async updateEmbed() {
@@ -232,15 +215,24 @@ class Bot {
       return;
     }
     try {
-      this.embed.setDescription(
-        `Time Remaining: ${Math.floor(
-          this.timer.getTimeRemaining() / 60
-        )} minutes ${this.timer.getTimeRemaining() % 60} seconds`
-      );
+      this.setEmbedToCurrentTime();
       await this.embedMessage.edit({ embeds: [this.embed] });
     } catch (error) {
       console.log("Could not edit embedding (was it deleted?)");
       this.embedMessage = null;
+    }
+  }
+
+  playAudio(audioFile) {
+    if (!this.voiceConnection) {
+      return;
+    }
+    try {
+      const resource = createAudioResource(audioFile);
+      this.audioPlayer.play(resource);
+    } catch (error) {
+      console.log("Could not play audio (was bot disconnected?)");
+      this.voiceConnection = null;
     }
   }
 

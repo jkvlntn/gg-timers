@@ -3,14 +3,14 @@ const cors = require("cors");
 const http = require("http");
 const { initializeSocket } = require("./socket");
 const Bot = require("./bot");
-const Timer = require("./timer");
+const Controller = require("./controller");
 require("dotenv").config();
 
 const app = express();
 const server = http.createServer(app);
 initializeSocket(server);
 
-const SERVER_PORT = process.env.SERVER_PORT || 8000;
+const SERVER_PORT = process.env.SERVER_PORT || 8080;
 const WEB_PORT = process.env.WEB_PORT || 3000;
 
 app.use(
@@ -28,26 +28,29 @@ app.use((req, res, next) => {
 });
 
 app.get("/timer/time", (req, res, next) => {
-  const timeRemaining = timer1.getTimeRemaining();
-  const paused = timer1.isPaused();
-  res.status(200).json({ time: timeRemaining, paused: paused });
+  // const timeRemaining = timer1.getTimeRemaining();
+  // const paused = timer1.isPaused();
+  // res.status(200).json({ time: timeRemaining, paused: paused });
+  res.status(200);
 });
 
 server.listen(SERVER_PORT, () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 });
 
-const timer1 = new Timer("Match 1", 15 * 60);
-const timer2 = new Timer("Match 2", 10 * 60);
+const controller1 = new Controller("Match 1");
+const controller2 = new Controller("Match 2");
+
 const bot1 = new Bot(
+  controller1,
   process.env.DISCORD1_TOKEN,
   process.env.DISCORD1_ID,
-  timer1
+  process.env.DISCORD1_CHANNEL_ID || null
 );
+
 const bot2 = new Bot(
+  controller1,
   process.env.DISCORD2_TOKEN,
   process.env.DISCORD2_ID,
-  timer1
+  process.env.DISCORD2_CHANNEL_ID || null
 );
-// timer.registerBot(bot1);
-// timer.registerBot(bot2);

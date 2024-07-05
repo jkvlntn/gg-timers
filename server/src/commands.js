@@ -56,6 +56,13 @@ const joinCommand = new SlashCommandBuilder()
   });
 commandsExports.push(joinCommand.toJSON());
 
+const initializeCommand = new SlashCommandBuilder()
+  .setName("initialize")
+  .setDescription("Join preset voice channels and send embeds")
+  .setDMPermission(false)
+  .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers);
+commandsExports.push(initializeCommand.toJSON());
+
 const embedCommand = new SlashCommandBuilder()
   .setName("embed")
   .setDescription("Embeds the timer")
