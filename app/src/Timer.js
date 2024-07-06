@@ -7,7 +7,7 @@ const Timer = ({ identifier }) => {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const socket = io("http://localhost:8000/", { transports: ["websocket"] });
+    const socket = io();
 
     const syncTimer = () => {
       console.log("Fetching");
