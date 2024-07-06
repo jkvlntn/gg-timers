@@ -21,23 +21,23 @@ class Controller {
   start() {
     this.playAudio("./audio/start.mp3");
     this.timer.start();
-    emitSocket("update");
+    emitSocket(`update${this.identifier}`);
   }
   pause() {
     this.timer.pause();
-    emitSocket("update");
+    emitSocket(`update${this.identifier}`);
     this.updateEmbeds();
     this.playAudio("./audio/pause.mp3");
   }
   reset() {
     this.timer.reset();
     this.updateEmbeds();
-    emitSocket("update");
+    emitSocket(`update${this.identifier}`);
   }
   set(timeToSet) {
     this.timer.set(timeToSet);
     this.updateEmbeds();
-    emitSocket("update");
+    emitSocket(`update${this.identifier}`);
   }
   getIdentifier() {
     return this.identifier;
@@ -55,6 +55,14 @@ class Controller {
   }
   getTimeString() {
     return `${this.timer.getMinutesRemaining()} minutes ${this.timer.getSecondsRemaining()} seconds`;
+  }
+
+  getTimerTime() {
+    return this.timer.getTimeRemaining();
+  }
+
+  isTimerPaused() {
+    return this.timer.isPaused();
   }
 
   async initializeAll() {

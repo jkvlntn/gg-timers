@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
+const path = require("path");
 const { initializeSocket } = require("./socket");
 const Bot = require("./bot");
 const Controller = require("./controller");
@@ -27,30 +28,43 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("api/time", (req, res, next) => {
-  // const timeRemaining = timer1.getTimeRemaining();
-  // const paused = timer1.isPaused();
-  // res.status(200).json({ time: timeRemaining, paused: paused });
-  // res.status(200).json({ bob: 100 });
+app.get("/api/time/:identifier", (req, res, next) => {
+  const identifier = req.params.identifier;
+  const controller = controllers.get(identifier);
+  if (controller) {
+    res.status(200).json({
+      time: controller.getTimerTime(),
+      paused: controller.isTimerPaused(),
+    });
+  } else {
+    res.status(404).send();
+  }
 });
 
+app.use(express.static(path.join(__dirname, "../../app/build")));
+app.get("*", (req, res, next) => {
+  res.sendFile(path.join(__dirname, "../../app/build", "index.html"));
+});
+
+console.log(__dirname);
 server.listen(SERVER_PORT, () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 });
 
-const controller1 = new Controller("Match 1");
-const controller2 = new Controller("Match 2");
+const controllers = new Map();
+controllers.set("1", new Controller("1"));
+controllers.set("2", new Controller("2"));
 
 const bot1 = new Bot(
-  controller1,
+  controllers.get("1"),
   process.env.DISCORD1_TOKEN,
   process.env.DISCORD1_ID,
   process.env.DISCORD1_CHANNEL_ID || null,
-  false
+  true
 );
 
 const bot2 = new Bot(
-  controller1,
+  controllers.get("2"),
   process.env.DISCORD2_TOKEN,
   process.env.DISCORD2_ID,
   process.env.DISCORD2_CHANNEL_ID || null,
