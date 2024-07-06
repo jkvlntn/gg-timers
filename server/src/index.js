@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 initializeSocket(server);
 
-const SERVER_PORT = process.env.SERVER_PORT || 8080;
+const SERVER_PORT = process.env.SERVER_PORT || 8000;
 const WEB_PORT = process.env.WEB_PORT || 3000;
 
 app.use(
@@ -27,11 +27,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/timer/time", (req, res, next) => {
+app.get("api/time", (req, res, next) => {
   // const timeRemaining = timer1.getTimeRemaining();
   // const paused = timer1.isPaused();
   // res.status(200).json({ time: timeRemaining, paused: paused });
-  res.status(200);
+  // res.status(200).json({ bob: 100 });
 });
 
 server.listen(SERVER_PORT, () => {
@@ -45,12 +45,14 @@ const bot1 = new Bot(
   controller1,
   process.env.DISCORD1_TOKEN,
   process.env.DISCORD1_ID,
-  process.env.DISCORD1_CHANNEL_ID || null
+  process.env.DISCORD1_CHANNEL_ID || null,
+  false
 );
 
 const bot2 = new Bot(
   controller1,
   process.env.DISCORD2_TOKEN,
   process.env.DISCORD2_ID,
-  process.env.DISCORD2_CHANNEL_ID || null
+  process.env.DISCORD2_CHANNEL_ID || null,
+  true
 );

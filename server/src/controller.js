@@ -43,9 +43,7 @@ class Controller {
     return this.identifier;
   }
   playAudio(audioFile) {
-    for (let x = 0; x < this.bots.length; x++) {
-      this.bots[x].playAudio(audioFile);
-    }
+    this.bots.map((bot) => bot.playAudio(audioFile));
   }
   updateEmbeds() {
     for (let x = 0; x < this.bots.length; x++) {
@@ -59,10 +57,12 @@ class Controller {
     return `${this.timer.getMinutesRemaining()} minutes ${this.timer.getSecondsRemaining()} seconds`;
   }
 
-  initializeAll() {
-    for (let x = 0; x < this.bots.length; x++) {
-      this.bots[x].initialize();
-    }
+  async initializeAll() {
+    await Promise.all(this.bots.map((bot) => bot.initialize()));
+  }
+
+  async clearAll() {
+    await Promise.all(this.bots.map((bot) => bot.clear()));
   }
 }
 

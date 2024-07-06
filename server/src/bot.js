@@ -14,12 +14,13 @@ const {
 const commandsExports = require("./commands");
 
 class Bot {
-  constructor(controller, token, id, defaultChannelId) {
+  constructor(controller, token, id, defaultChannelId, allowCommands) {
     this.controller = controller;
     this.controller.registerBot(this);
     this.token = token;
     this.id = id;
     this.defaultChannelId = defaultChannelId;
+    this.allowCommands = allowCommands;
     this.voiceConnection = null;
     this.audioPlayer = createAudioPlayer();
     this.embed = new EmbedBuilder();
@@ -40,6 +41,8 @@ class Bot {
 
     this.client.once(Events.ClientReady, (readyClient) => {
       console.log(`${readyClient.user.tag} has been logged in!`);
+      this.removeOldMessages();
+      this.registerCommands();
     });
 
     this.client.on(Events.InteractionCreate, (interaction) => {
@@ -60,8 +63,8 @@ class Bot {
         case "join":
           this.joinCommand(interaction);
           break;
-        case "initialize":
-          this.initializeCommand(interaction);
+        case "leave":
+          this.leaveCommand(interaction);
           break;
         case "embed":
           this.embedCommand(interaction);
@@ -76,146 +79,85 @@ class Bot {
         return;
       }
       if (newState.channelId === null) {
-        if (this.voiceConnection) {
-          this.voiceConnection.destroy();
-        }
-        this.voiceConnection = null;
+        this.disconnectFromVoice();
       }
     });
 
-    this.registerClient();
-    this.registerCommands();
-  }
-
-  registerClient() {
     this.client.login(this.token).catch((error) => {
       console.log(error);
     });
   }
 
   async startCommand(interaction) {
-    await interaction.reply({
-      content: `Starting timer: ${this.controller.getIdentifier()}`,
-      ephemeral: true,
-    });
+    await this.reply(
+      interaction,
+      `Starting timer: ${this.controller.getIdentifier()}`
+    );
     this.controller.start();
   }
 
   async pauseCommand(interaction) {
+    await this.reply(
+      interaction,
+      `Pausing timer: ${this.controller.getIdentifier()}`
+    );
     this.controller.pause();
-    await interaction.reply({
-      content: `Pausing timer: ${this.controller.getIdentifier()}`,
-      ephemeral: true,
-    });
   }
 
   async resetCommand(interaction) {
+    await this.reply(
+      interaction,
+      `Resetting timer: ${this.controller.getIdentifier()}`
+    );
     this.controller.reset();
-    await interaction.reply({
-      content: `Resetting timer: ${this.controller.getIdentifier()}`,
-      ephemeral: true,
-    });
   }
 
   async setCommand(interaction) {
+    await this.reply(
+      interaction,
+      `Setting timer: ${this.controller.getIdentifier()}`
+    );
     const minutes = interaction.options.getInteger("minutes");
     const seconds = interaction.options.getInteger("seconds");
     this.controller.set(minutes * 60 + seconds);
-    await interaction.reply({
-      content: `Setting timer: ${this.controller.getIdentifier()}`,
-      ephemeral: true,
-    });
   }
 
   async joinCommand(interaction) {
-    let channel;
-    const user = interaction.options.getUser("user");
-    if (user) {
-      const userToJoin = await interaction.guild.members.fetch(user.id);
-      channel = userToJoin.voice.channel;
-      if (!channel) {
-        await interaction.reply({
-          content: `${
-            userToJoin.user.nickname || userToJoin.user.globalName
-          } is not in a voice channel`,
-          ephemeral: true,
-        });
-        return;
-      }
-    } else {
-      channel = interaction.member.voice.channel;
-      if (!channel) {
-        await interaction.reply({
-          content: "You must be in a voice channel",
-          ephemeral: true,
-        });
-        return;
-      }
-    }
-    try {
-      this.voiceConnection = joinVoiceChannel({
-        channelId: channel.id,
-        guildId: interaction.guild.id,
-        group: this.client.user.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-      });
-      this.voiceConnection.subscribe(this.audioPlayer);
-      await interaction.reply({
-        content: `Joining ${channel.name}`,
-        ephemeral: true,
-      });
-    } catch (error) {
-      console.log("Error joining voice channel");
-      this.voiceConnection = null;
-    }
+    await this.reply(
+      interaction,
+      `Preparing bots for ${this.controller.getIdentifier()}`
+    );
+    await this.controller.initializeAll();
   }
 
-  async initializeCommand(interaction) {
-    await interaction.reply({
-      content: `Initializing bots for ${this.controller.getIdentifier()}`,
-      ephemeral: true,
-    });
-    this.controller.initializeAll();
+  async leaveCommand(interaction) {
+    await this.reply(
+      interaction,
+      `Disconnecting bots for ${this.controller.getIdentifier()}`
+    );
+    await this.controller.clearAll();
   }
 
   async initialize() {
-    const channel = await this.client.channels.fetch(this.defaultChannelId);
-    this.setEmbedToCurrentTime();
-    this.embedMessage = await channel.send({
-      embeds: [this.embed],
-    });
-    this.voiceConnection = joinVoiceChannel({
-      channelId: channel.id,
-      guildId: channel.guild.id,
-      group: this.client.user.id,
-      adapterCreator: channel.guild.voiceAdapterCreator,
-    });
+    const channel = await this.getDefaultChannelFromId(this.defaultChannelId);
+    if (!channel) {
+      return;
+    }
+    await this.sendEmbed(channel);
+    this.connectToVoice(channel);
   }
 
-  setEmbedToCurrentTime() {
-    this.embed.setTitle(`Timer - ${this.controller.getIdentifier()}`);
-    this.embed.setDescription(
-      `Time Remaining: ${this.controller.getTimeString()}`
-    );
-  }
-
-  async embedCommand(interaction) {
-    interaction.reply({
-      content: "Sending timer embed",
-      ephemeral: true,
-    });
-    this.setEmbedToCurrentTime();
-    this.embedMessage = await interaction.channel.send({
-      embeds: [this.embed],
-    });
+  async clear() {
+    await this.deleteCurrentEmbed();
+    this.disconnectFromVoice();
   }
 
   async updateEmbed() {
     if (!this.embedMessage) {
       return;
     }
+    this.setEmbedToCurrentTime();
     try {
-      this.setEmbedToCurrentTime();
       await this.embedMessage.edit({ embeds: [this.embed] });
     } catch (error) {
       console.log("Could not edit embedding (was it deleted?)");
@@ -236,10 +178,98 @@ class Bot {
     }
   }
 
+  setEmbedToCurrentTime() {
+    this.embed.setTitle(`Timer - ${this.controller.getIdentifier()}`);
+    this.embed.setDescription(
+      `Time Remaining: ${this.controller.getTimeString()}`
+    );
+  }
+
+  async deleteCurrentEmbed() {
+    if (!this.embedMessage) {
+      return;
+    }
+    try {
+      await this.embedMessage.delete();
+      this.embedMessage = null;
+    } catch (error) {
+      this.embedMessage = null;
+    }
+  }
+
+  async sendEmbed(channel) {
+    await this.deleteCurrentEmbed();
+    this.setEmbedToCurrentTime();
+    try {
+      this.embedMessage = await channel.send({
+        embeds: [this.embed],
+      });
+    } catch (error) {
+      this.embedMessage = null;
+      console.log("Failed to send embed");
+    }
+  }
+
+  async reply(interaction, message) {
+    await interaction.reply({ content: message, ephemeral: true });
+  }
+
+  connectToVoice(channel) {
+    try {
+      this.voiceConnection = joinVoiceChannel({
+        channelId: channel.id,
+        guildId: channel.guild.id,
+        group: this.client.user.id,
+        adapterCreator: channel.guild.voiceAdapterCreator,
+      });
+      this.voiceConnection.subscribe(this.audioPlayer);
+    } catch (error) {
+      this.voiceConnection = null;
+      console.log("Failed to connect to voice channel");
+    }
+  }
+
+  disconnectFromVoice() {
+    if (!this.voiceConnection) {
+      return;
+    }
+    this.voiceConnection.destroy();
+    this.voiceConnection = null;
+  }
+
+  async getDefaultChannelFromId() {
+    if (!this.defaultChannelId) {
+      return null;
+    }
+    try {
+      const channel = await this.client.channels.fetch(this.defaultChannelId);
+      return channel;
+    } catch (error) {
+      console.log("Channel could not be found based on provided id");
+      return null;
+    }
+  }
+
+  async removeOldMessages() {
+    const channel = await this.getDefaultChannelFromId();
+    if (!channel) {
+      return;
+    }
+    try {
+      let pastMessages = (await channel.messages.fetch({ limit: 100 })).filter(
+        (message) => message.author.id === this.client.user.id
+      );
+      await Promise.all(pastMessages.map((message) => message.delete()));
+    } catch (error) {
+      console.log("Failed to clear past messages");
+    }
+  }
+
   registerCommands() {
+    const exports = this.allowCommands ? commandsExports : [];
     this.rest
       .put(Routes.applicationCommands(this.id), {
-        body: commandsExports,
+        body: exports,
       })
       .catch((error) => {
         console.log(error);
