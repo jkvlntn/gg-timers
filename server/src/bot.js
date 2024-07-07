@@ -91,7 +91,7 @@ class Bot {
   async startCommand(interaction) {
     await this.reply(
       interaction,
-      `Starting timer: Match ${this.controller.getIdentifier()}`
+      `Starting timer: Server ${this.controller.getIdentifier()}`
     );
     this.controller.start();
   }
@@ -99,7 +99,7 @@ class Bot {
   async pauseCommand(interaction) {
     await this.reply(
       interaction,
-      `Pausing timer: Match ${this.controller.getIdentifier()}`
+      `Pausing timer: Server ${this.controller.getIdentifier()}`
     );
     this.controller.pause();
   }
@@ -107,7 +107,7 @@ class Bot {
   async resetCommand(interaction) {
     await this.reply(
       interaction,
-      `Resetting timer: Match ${this.controller.getIdentifier()}`
+      `Resetting timer: Server ${this.controller.getIdentifier()}`
     );
     this.controller.reset();
   }
@@ -115,7 +115,7 @@ class Bot {
   async setCommand(interaction) {
     await this.reply(
       interaction,
-      `Setting timer: Match ${this.controller.getIdentifier()}`
+      `Setting timer: Server ${this.controller.getIdentifier()}`
     );
     const minutes = interaction.options.getInteger("minutes");
     const seconds = interaction.options.getInteger("seconds");
@@ -125,7 +125,7 @@ class Bot {
   async joinCommand(interaction) {
     await this.reply(
       interaction,
-      `Preparing bots for Match ${this.controller.getIdentifier()}`
+      `Preparing bots for Server ${this.controller.getIdentifier()}`
     );
     await this.controller.initializeAll();
   }
@@ -133,7 +133,7 @@ class Bot {
   async leaveCommand(interaction) {
     await this.reply(
       interaction,
-      `Disconnecting bots for Match ${this.controller.getIdentifier()}`
+      `Disconnecting bots for Server ${this.controller.getIdentifier()}`
     );
     await this.controller.clearAll();
   }
@@ -179,7 +179,7 @@ class Bot {
   }
 
   setEmbedToCurrentTime() {
-    this.embed.setTitle(`Timer - Match ${this.controller.getIdentifier()}`);
+    this.embed.setTitle(`Timer - Server ${this.controller.getIdentifier()}`);
     this.embed.setDescription(
       `Time Remaining: ${this.controller.getTimeString()}`
     );

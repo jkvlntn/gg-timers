@@ -11,6 +11,7 @@ class Controller {
       },
       () => {
         this.playAudio("./audio/finished.mp3");
+        emitSocket(`update${this.identifier}`);
       }
     );
     this.bots = [];

@@ -1,3 +1,8 @@
+@font-face {
+  font-family: "LemonMocktail";
+  src: url(font.woff2) format("woff2");
+}
+
 .outer-box {
   width: 100vw;
   height: 100vh;
@@ -11,13 +16,21 @@
 .timer-box {
   width: 600px;
   height: 400px;
-  border: 2px solid black;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
+  font-family: "LemonMocktail";
+  font-size: 80pt;
+  color: white;
+  -webkit-text-stroke-color: black;
+  -webkit-text-stroke-width: 3px;
 }
 
 .red {
-  color: lightcoral;
+  -webkit-text-stroke-color: #8b0000;
+}
+
+.special {
+  padding-left: 10px;
+  padding-right: 10px;
 }

@@ -7,11 +7,14 @@ const Timer = ({ identifier }) => {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const socket = io();
+    const SERVER_URL = process.env.REACT_APP_SERVER_URL || "";
+    const socket = io(`${SERVER_URL}`, {
+      transports: ["websocket"],
+    });
 
     const syncTimer = () => {
       console.log("Fetching");
-      fetch(`/api/time/${identifier}`, {
+      fetch(`${SERVER_URL}/api/time/${identifier}`, {
         method: "GET",
       })
         .then((response) => response.json())
@@ -32,7 +35,7 @@ const Timer = ({ identifier }) => {
       socket.off(`update${identifier}`, syncTimer);
       socket.disconnect();
     };
-  }, [identifier]);
+  }, []);
 
   useEffect(() => {
     let interval = null;
@@ -52,16 +55,10 @@ const Timer = ({ identifier }) => {
     <div className={`timer-box ${paused ? "red" : ""}`}>
       {loaded ? (
         <div>
-          <span>{Math.floor(timeRemaining / 60)} </span>
-          <span>Minutes</span>
-        </div>
-      ) : (
-        <div></div>
-      )}
-      {loaded ? (
-        <div>
-          <span>{timeRemaining % 60} </span>
-          <span>Seconds</span>
+          {Math.floor(timeRemaining / 60)}
+          <span className="special">:</span>
+          {timeRemaining % 60 < 10 ? "0" : ""}
+          {timeRemaining % 60}
         </div>
       ) : (
         <div></div>

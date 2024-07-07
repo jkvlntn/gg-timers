@@ -5,14 +5,8 @@ import "./App.css";
 function App() {
   return (
     <div className="outer-box">
-      <div>
-        <h4>Match 1</h4>
-        <Timer identifier="1" />
-      </div>
-      <div>
-        <h4>Match 2</h4>
-        <Timer identifier="2" />
-      </div>
+      <h4>Time Remaining in Server 1:</h4>
+      <Timer identifier="1" />
     </div>
   );
 }
