@@ -4,7 +4,6 @@ import io from "socket.io-client";
 const Timer = ({ identifier }) => {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [paused, setPaused] = useState(true);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const SERVER_URL = process.env.REACT_APP_SERVER_URL || "";
@@ -12,27 +11,15 @@ const Timer = ({ identifier }) => {
       transports: ["websocket"],
     });
 
-    const syncTimer = () => {
-      console.log("Fetching");
-      fetch(`${SERVER_URL}/api/time/${identifier}`, {
-        method: "GET",
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          setTimeRemaining(data.time);
-          setPaused(data.paused);
-          setLoaded(true);
-        })
-        .catch((error) => {
-          console.log("Timer update failed");
-        });
-    };
+    socket.on(`update${identifier}`, (timeRemaining, paused) => {
+      setTimeRemaining(timeRemaining);
+      setPaused(paused);
+    });
 
-    socket.on(`update${identifier}`, syncTimer);
-    syncTimer();
+    socket.emit(`get${identifier}`);
 
     return () => {
-      socket.off(`update${identifier}`, syncTimer);
+      socket.off(`update${identifier}`);
       socket.disconnect();
     };
   }, []);
@@ -52,17 +39,20 @@ const Timer = ({ identifier }) => {
   }, [paused]);
 
   return (
-    <div className={`timer-box ${paused ? "red" : ""}`}>
-      {loaded ? (
-        <div>
-          {Math.floor(timeRemaining / 60)}
-          <span className="special">:</span>
-          {timeRemaining % 60 < 10 ? "0" : ""}
-          {timeRemaining % 60}
-        </div>
-      ) : (
-        <div></div>
-      )}
+    <div className="outer-box">
+      <h4>Time Remaining in Server {identifier}</h4>
+      <div className={`timer-box ${paused ? "red" : ""}`}>
+        {timeRemaining ? (
+          <div>
+            {Math.floor(timeRemaining / 60)}
+            <span className="special">:</span>
+            {timeRemaining % 60 < 10 ? "0" : ""}
+            {timeRemaining % 60}
+          </div>
+        ) : (
+          <div></div>
+        )}
+      </div>
     </div>
   );
 };

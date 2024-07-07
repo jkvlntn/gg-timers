@@ -12,6 +12,7 @@ const {
   createAudioResource,
 } = require("@discordjs/voice");
 const commandsExports = require("./commands");
+require("dotenv").config();
 
 class Bot {
   constructor(controller, token, id, defaultChannelId, allowCommands) {
@@ -65,9 +66,6 @@ class Bot {
           break;
         case "leave":
           this.leaveCommand(interaction);
-          break;
-        case "embed":
-          this.embedCommand(interaction);
           break;
         default:
           interaction.reply({ content: `Unknown command`, ephemeral: true });
@@ -182,6 +180,9 @@ class Bot {
     this.embed.setTitle(`Timer - Server ${this.controller.getIdentifier()}`);
     this.embed.setDescription(
       `Time Remaining: ${this.controller.getTimeString()}`
+    );
+    this.embed.setURL(
+      `${process.env.SERVER_URL}/server${this.controller.getIdentifier()}`
     );
   }
 

@@ -28,25 +28,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/time/:identifier", (req, res, next) => {
-  const identifier = req.params.identifier;
-  const controller = controllers.get(identifier);
-  if (controller) {
-    res.status(200).json({
-      time: controller.getTimerTime(),
-      paused: controller.isTimerPaused(),
-    });
-  } else {
-    res.status(404).send();
-  }
-});
-
 app.use(express.static(path.join(__dirname, "../../app/build")));
 app.get("*", (req, res, next) => {
   res.sendFile(path.join(__dirname, "../../app/build", "index.html"));
 });
 
-console.log(__dirname);
 server.listen(SERVER_PORT, () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 });
@@ -64,11 +50,11 @@ const ref1 = new Bot(
 );
 
 const arm = new Bot(
-  controllers.get("1"),
+  controllers.get("2"),
   process.env.DISCORD2_TOKEN,
   process.env.DISCORD2_ID,
   process.env.DISCORD2_CHANNEL_ID || null,
-  false
+  true
 );
 
 // const hug = new Bot(

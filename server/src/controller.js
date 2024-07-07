@@ -1,5 +1,5 @@
 const Timer = require("./timer");
-const { emitSocket } = require("./socket");
+const { addSocketHandler, emitSocket } = require("./socket");
 
 class Controller {
   constructor(identifier) {
@@ -11,10 +11,11 @@ class Controller {
       },
       () => {
         this.playAudio("./audio/finished.mp3");
-        emitSocket(`update${this.identifier}`);
+        this.emitTime();
       }
     );
     this.bots = [];
+    addSocketHandler(`get${identifier}`, this.emitTime.bind(this));
   }
   registerBot(bot) {
     this.bots.push(bot);
@@ -22,23 +23,23 @@ class Controller {
   start() {
     this.playAudio("./audio/start.mp3");
     this.timer.start();
-    emitSocket(`update${this.identifier}`);
+    this.emitTime();
   }
   pause() {
     this.timer.pause();
-    emitSocket(`update${this.identifier}`);
+    this.emitTime();
     this.updateEmbeds();
     this.playAudio("./audio/pause.mp3");
   }
   reset() {
     this.timer.reset();
     this.updateEmbeds();
-    emitSocket(`update${this.identifier}`);
+    this.emitTime();
   }
   set(timeToSet) {
     this.timer.set(timeToSet);
     this.updateEmbeds();
-    emitSocket(`update${this.identifier}`);
+    this.emitTime();
   }
   getIdentifier() {
     return this.identifier;
@@ -58,20 +59,20 @@ class Controller {
     return `${this.timer.getMinutesRemaining()} minutes ${this.timer.getSecondsRemaining()} seconds`;
   }
 
-  getTimerTime() {
-    return this.timer.getTimeRemaining();
-  }
-
-  isTimerPaused() {
-    return this.timer.isPaused();
-  }
-
   async initializeAll() {
     await Promise.all(this.bots.map((bot) => bot.initialize()));
   }
 
   async clearAll() {
     await Promise.all(this.bots.map((bot) => bot.clear()));
+  }
+
+  emitTime() {
+    emitSocket(
+      `update${this.identifier}`,
+      this.timer.getTimeRemaining(),
+      this.timer.isPaused()
+    );
   }
 }
 

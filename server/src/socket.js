@@ -6,12 +6,18 @@ const initializeSocket = (server) => {
   io = socketIO(server);
 };
 
-const emitSocket = (event) => {
+const emitSocket = (event, ...parameters) => {
   try {
-    io.emit(event);
+    io.emit(event, ...parameters);
   } catch (error) {
     console.log(error);
   }
 };
 
-module.exports = { initializeSocket, emitSocket };
+addSocketHandler = (event, callback) => {
+  io.on("connection", (socket) => {
+    socket.on(event, callback);
+  });
+};
+
+module.exports = { addSocketHandler, initializeSocket, emitSocket };
