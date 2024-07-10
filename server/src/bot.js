@@ -4,7 +4,6 @@ const {
   GatewayIntentBits,
   REST,
   Routes,
-  EmbedBuilder,
 } = require("discord.js");
 const {
   joinVoiceChannel,
@@ -12,6 +11,7 @@ const {
   createAudioResource,
 } = require("@discordjs/voice");
 const commandsExports = require("./commands");
+const { getTimerEmbed, getButtonController } = require("./gui");
 require("dotenv").config();
 
 class Bot {
@@ -21,11 +21,17 @@ class Bot {
     this.token = token;
     this.id = id;
     this.defaultChannelId = defaultChannelId;
+    this.defaultChannel = null;
+    this.loggingChannelId = process.env.LOGGING_CHANNEL_ID;
+    this.loggingChannel = null;
     this.allowCommands = allowCommands;
     this.voiceConnection = null;
     this.audioPlayer = createAudioPlayer();
-    this.embed = new EmbedBuilder();
-    this.embedMessage = null;
+
+    this.timerEmbed = getTimerEmbed(this.controller.getIdentifier());
+    this.timerEmbedMessage = null;
+
+    this.buttons = getButtonController();
 
     this.client = new Client({
       intents: [
@@ -47,7 +53,14 @@ class Bot {
     });
 
     this.client.on(Events.InteractionCreate, (interaction) => {
-      const command = interaction.commandName;
+      let command;
+      if (interaction.isChatInputCommand()) {
+        command = interaction.commandName;
+      } else if (interaction.isButton()) {
+        command = interaction.customId;
+      } else {
+        return;
+      }
       switch (command) {
         case "start":
           this.startCommand(interaction);
@@ -86,44 +99,69 @@ class Bot {
     });
   }
 
-  async startCommand(interaction) {
-    await this.reply(
+  startCommand(interaction) {
+    this.reply(
       interaction,
       `Starting timer: Server ${this.controller.getIdentifier()}`
     );
     this.controller.start();
+    this.log(
+      `${
+        interaction.member.nickname || interaction.user.globalName
+      } started timer on server ${this.controller.getIdentifier()}`
+    );
   }
 
-  async pauseCommand(interaction) {
-    await this.reply(
+  pauseCommand(interaction) {
+    this.reply(
       interaction,
       `Pausing timer: Server ${this.controller.getIdentifier()}`
     );
     this.controller.pause();
+    this.log(
+      `${
+        interaction.member.nickname || interaction.user.globalName
+      } paused timer on server ${this.controller.getIdentifier()}`
+    );
   }
 
-  async resetCommand(interaction) {
-    await this.reply(
+  resetCommand(interaction) {
+    this.reply(
       interaction,
       `Resetting timer: Server ${this.controller.getIdentifier()}`
     );
     this.controller.reset();
+    this.log(
+      `${
+        interaction.member.nickname || interaction.user.globalName
+      } reset timer on server ${this.controller.getIdentifier()}`
+    );
   }
 
-  async setCommand(interaction) {
-    await this.reply(
+  setCommand(interaction) {
+    this.reply(
       interaction,
       `Setting timer: Server ${this.controller.getIdentifier()}`
     );
     const minutes = interaction.options.getInteger("minutes");
     const seconds = interaction.options.getInteger("seconds");
     this.controller.set(minutes * 60 + seconds);
+    this.log(
+      `${
+        interaction.member.nickname || interaction.user.globalName
+      } set timer on server ${this.controller.getIdentifier()}`
+    );
   }
 
   async joinCommand(interaction) {
-    await this.reply(
+    this.reply(
       interaction,
       `Preparing bots for Server ${this.controller.getIdentifier()}`
+    );
+    this.log(
+      `${
+        interaction.member.nickname || interaction.user.globalName
+      } initialized server ${this.controller.getIdentifier()} bots`
     );
     await this.controller.initializeAll();
   }
@@ -133,11 +171,16 @@ class Bot {
       interaction,
       `Disconnecting bots for Server ${this.controller.getIdentifier()}`
     );
+    this.log(
+      `${
+        interaction.member.nickname || interaction.user.globalName
+      } disconnected server ${this.controller.getIdentifier()} bots`
+    );
     await this.controller.clearAll();
   }
 
   async initialize() {
-    const channel = await this.getDefaultChannelFromId(this.defaultChannelId);
+    const channel = await this.getDefaultChannel();
     if (!channel) {
       return;
     }
@@ -151,15 +194,24 @@ class Bot {
   }
 
   async updateEmbed() {
-    if (!this.embedMessage) {
+    if (!this.timerEmbedMessage) {
       return;
     }
     this.setEmbedToCurrentTime();
     try {
-      await this.embedMessage.edit({ embeds: [this.embed] });
+      if (this.allowCommands) {
+        await this.timerEmbedMessage.edit({
+          embeds: [this.timerEmbed],
+          components: [this.buttons],
+        });
+      } else {
+        await this.timerEmbedMessage.edit({
+          embeds: [this.timerEmbed],
+        });
+      }
     } catch (error) {
       console.log("Could not edit embedding (was it deleted?)");
-      this.embedMessage = null;
+      this.timerEmbedMessage = null;
     }
   }
 
@@ -177,24 +229,23 @@ class Bot {
   }
 
   setEmbedToCurrentTime() {
-    this.embed.setTitle(`Timer - Server ${this.controller.getIdentifier()}`);
-    this.embed.setDescription(
-      `Time Remaining: ${this.controller.getTimeString()}`
+    this.timerEmbed.setTitle(
+      `Timer - Server ${this.controller.getIdentifier()}`
     );
-    this.embed.setURL(
-      `${process.env.SERVER_URL}/server${this.controller.getIdentifier()}`
+    this.timerEmbed.setDescription(
+      `Time Remaining: ${this.controller.getTimeString()}`
     );
   }
 
   async deleteCurrentEmbed() {
-    if (!this.embedMessage) {
+    if (!this.timerEmbedMessage) {
       return;
     }
     try {
-      await this.embedMessage.delete();
-      this.embedMessage = null;
+      await this.timerEmbedMessage.delete();
+      this.timerEmbedMessage = null;
     } catch (error) {
-      this.embedMessage = null;
+      this.timerEmbedMessage = null;
     }
   }
 
@@ -202,17 +253,28 @@ class Bot {
     await this.deleteCurrentEmbed();
     this.setEmbedToCurrentTime();
     try {
-      this.embedMessage = await channel.send({
-        embeds: [this.embed],
-      });
+      if (this.allowCommands) {
+        this.timerEmbedMessage = await channel.send({
+          embeds: [this.timerEmbed],
+          components: [this.buttons],
+        });
+      } else {
+        this.timerEmbedMessage = await channel.send({
+          embeds: [this.timerEmbed],
+        });
+      }
     } catch (error) {
-      this.embedMessage = null;
+      this.timerEmbedMessage = null;
       console.log("Failed to send embed");
     }
   }
 
   async reply(interaction, message) {
-    await interaction.reply({ content: message, ephemeral: true });
+    try {
+      await interaction.reply({ content: message, ephemeral: true });
+    } catch (error) {
+      console.log("Failed to reply to interaction");
+    }
   }
 
   connectToVoice(channel) {
@@ -238,21 +300,56 @@ class Bot {
     this.voiceConnection = null;
   }
 
-  async getDefaultChannelFromId() {
+  async getDefaultChannel() {
+    if (this.defaultChannel) {
+      return this.defaultChannel;
+    }
     if (!this.defaultChannelId) {
       return null;
     }
     try {
-      const channel = await this.client.channels.fetch(this.defaultChannelId);
-      return channel;
+      this.defaultChannel = await this.client.channels.fetch(
+        this.defaultChannelId
+      );
+      return this.defaultChannel;
     } catch (error) {
       console.log("Channel could not be found based on provided id");
       return null;
     }
   }
 
+  async getLoggingChannel() {
+    if (this.loggingChannel) {
+      return this.loggingChannel;
+    }
+    if (!this.loggingChannelId) {
+      return null;
+    }
+    try {
+      this.loggingChannel = await this.client.channels.fetch(
+        this.loggingChannelId
+      );
+      return this.loggingChannel;
+    } catch (error) {
+      console.log("Logging channel could not be found based on provided id");
+      return null;
+    }
+  }
+
+  async log(message) {
+    const channel = await this.getLoggingChannel();
+    if (!channel) {
+      return;
+    }
+    try {
+      await channel.send({ content: message });
+    } catch (error) {
+      console.log("Could not send log message");
+    }
+  }
+
   async removeOldMessages() {
-    const channel = await this.getDefaultChannelFromId();
+    const channel = await this.getDefaultChannel();
     if (!channel) {
       return;
     }
@@ -273,7 +370,7 @@ class Bot {
         body: exports,
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Failed to register commands");
       });
   }
 }
