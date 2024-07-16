@@ -9,6 +9,7 @@ const {
   joinVoiceChannel,
   createAudioPlayer,
   createAudioResource,
+  AudioPlayerStatus,
 } = require("@discordjs/voice");
 const commandsExports = require("./commands");
 const { getTimerEmbed, getButtonController } = require("./gui");
@@ -28,9 +29,8 @@ class Bot {
     this.voiceConnection = null;
     this.audioPlayer = createAudioPlayer();
 
-    this.timerEmbed = getTimerEmbed(this.controller.getIdentifier());
-    this.timerEmbedMessage = null;
-
+    this.embed = getTimerEmbed(this.controller.getIdentifier());
+    this.embedMessage = null;
     this.buttons = getButtonController();
 
     this.client = new Client({
@@ -68,6 +68,9 @@ class Bot {
         case "pause":
           this.pauseCommand(interaction);
           break;
+        case "end":
+          this.endCommand(interaction);
+          break;
         case "reset":
           this.resetCommand(interaction);
           break;
@@ -100,11 +103,11 @@ class Bot {
   }
 
   startCommand(interaction) {
+    this.controller.start();
     this.reply(
       interaction,
       `Starting timer: Server ${this.controller.getIdentifier()}`
     );
-    this.controller.start();
     this.log(
       `${
         interaction.member.nickname || interaction.user.globalName
@@ -113,11 +116,11 @@ class Bot {
   }
 
   pauseCommand(interaction) {
+    this.controller.pause();
     this.reply(
       interaction,
       `Pausing timer: Server ${this.controller.getIdentifier()}`
     );
-    this.controller.pause();
     this.log(
       `${
         interaction.member.nickname || interaction.user.globalName
@@ -125,12 +128,25 @@ class Bot {
     );
   }
 
+  endCommand(interaction) {
+    this.controller.end();
+    this.reply(
+      interaction,
+      `Ending timer: Server ${this.controller.getIdentifier()}`
+    );
+    this.log(
+      `${
+        interaction.member.nickname || interaction.user.globalName
+      } ended timer on server ${this.controller.getIdentifier()}`
+    );
+  }
+
   resetCommand(interaction) {
+    this.controller.reset();
     this.reply(
       interaction,
       `Resetting timer: Server ${this.controller.getIdentifier()}`
     );
-    this.controller.reset();
     this.log(
       `${
         interaction.member.nickname || interaction.user.globalName
@@ -139,13 +155,13 @@ class Bot {
   }
 
   setCommand(interaction) {
+    const minutes = interaction.options.getInteger("minutes");
+    const seconds = interaction.options.getInteger("seconds");
+    this.controller.set(minutes * 60 + seconds);
     this.reply(
       interaction,
       `Setting timer: Server ${this.controller.getIdentifier()}`
     );
-    const minutes = interaction.options.getInteger("minutes");
-    const seconds = interaction.options.getInteger("seconds");
-    this.controller.set(minutes * 60 + seconds);
     this.log(
       `${
         interaction.member.nickname || interaction.user.globalName
@@ -153,7 +169,8 @@ class Bot {
     );
   }
 
-  async joinCommand(interaction) {
+  joinCommand(interaction) {
+    this.controller.initializeAll();
     this.reply(
       interaction,
       `Preparing bots for Server ${this.controller.getIdentifier()}`
@@ -163,11 +180,11 @@ class Bot {
         interaction.member.nickname || interaction.user.globalName
       } initialized server ${this.controller.getIdentifier()} bots`
     );
-    await this.controller.initializeAll();
   }
 
-  async leaveCommand(interaction) {
-    await this.reply(
+  leaveCommand(interaction) {
+    this.controller.clearAll();
+    this.reply(
       interaction,
       `Disconnecting bots for Server ${this.controller.getIdentifier()}`
     );
@@ -176,7 +193,6 @@ class Bot {
         interaction.member.nickname || interaction.user.globalName
       } disconnected server ${this.controller.getIdentifier()} bots`
     );
-    await this.controller.clearAll();
   }
 
   async initialize() {
@@ -184,34 +200,34 @@ class Bot {
     if (!channel) {
       return;
     }
-    await this.sendEmbed(channel);
+    this.sendEmbed(channel);
     this.connectToVoice(channel);
   }
 
-  async clear() {
-    await this.deleteCurrentEmbed();
+  clear() {
+    this.deleteCurrentEmbed();
     this.disconnectFromVoice();
   }
 
   async updateEmbed() {
-    if (!this.timerEmbedMessage) {
+    if (!this.embedMessage) {
       return;
     }
     this.setEmbedToCurrentTime();
     try {
       if (this.allowCommands) {
-        await this.timerEmbedMessage.edit({
-          embeds: [this.timerEmbed],
+        await this.embedMessage.edit({
+          embeds: [this.embed],
           components: [this.buttons],
         });
       } else {
-        await this.timerEmbedMessage.edit({
-          embeds: [this.timerEmbed],
+        await this.embedMessage.edit({
+          embeds: [this.embed],
         });
       }
     } catch (error) {
       console.log("Could not edit embedding (was it deleted?)");
-      this.timerEmbedMessage = null;
+      this.embedMessage = null;
     }
   }
 
@@ -228,24 +244,45 @@ class Bot {
     }
   }
 
+  playBlockingAudio(audioFile) {
+    return new Promise((resolve, reject) => {
+      if (!this.voiceConnection) {
+        return resolve();
+      }
+      try {
+        const resource = createAudioResource(audioFile);
+        this.audioPlayer.play(resource);
+
+        const onIdle = () => {
+          this.audioPlayer.off(AudioPlayerStatus.Idle, onIdle);
+          resolve();
+        };
+
+        this.audioPlayer.on(AudioPlayerStatus.Idle, onIdle);
+      } catch (error) {
+        console.log("Could not play audio (was bot disconnected?)");
+        this.voiceConnection = null;
+        resolve();
+      }
+    });
+  }
+
   setEmbedToCurrentTime() {
-    this.timerEmbed.setTitle(
-      `Timer - Server ${this.controller.getIdentifier()}`
-    );
-    this.timerEmbed.setDescription(
+    this.embed.setTitle(`Timer - Server ${this.controller.getIdentifier()}`);
+    this.embed.setDescription(
       `Time Remaining: ${this.controller.getTimeString()}`
     );
   }
 
   async deleteCurrentEmbed() {
-    if (!this.timerEmbedMessage) {
+    if (!this.embedMessage) {
       return;
     }
     try {
-      await this.timerEmbedMessage.delete();
-      this.timerEmbedMessage = null;
+      await this.embedMessage.delete();
+      this.embedMessage = null;
     } catch (error) {
-      this.timerEmbedMessage = null;
+      this.embedMessage = null;
     }
   }
 
@@ -254,17 +291,17 @@ class Bot {
     this.setEmbedToCurrentTime();
     try {
       if (this.allowCommands) {
-        this.timerEmbedMessage = await channel.send({
-          embeds: [this.timerEmbed],
+        this.embedMessage = await channel.send({
+          embeds: [this.embed],
           components: [this.buttons],
         });
       } else {
-        this.timerEmbedMessage = await channel.send({
-          embeds: [this.timerEmbed],
+        this.embedMessage = await channel.send({
+          embeds: [this.embed],
         });
       }
     } catch (error) {
-      this.timerEmbedMessage = null;
+      this.embedMessage = null;
       console.log("Failed to send embed");
     }
   }
@@ -363,15 +400,15 @@ class Bot {
     }
   }
 
-  registerCommands() {
+  async registerCommands() {
     const exports = this.allowCommands ? commandsExports : [];
-    this.rest
-      .put(Routes.applicationCommands(this.id), {
+    try {
+      await this.rest.put(Routes.applicationCommands(this.id), {
         body: exports,
-      })
-      .catch((error) => {
-        console.log("Failed to register commands");
       });
+    } catch (error) {
+      console.log("Failed to register commands");
+    }
   }
 }
 

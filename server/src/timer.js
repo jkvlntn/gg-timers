@@ -14,13 +14,13 @@ const Timer = class {
     this.paused = false;
     this.interval = setInterval(() => {
       this.timeRemaining -= 1;
-      this.updateCallback();
-      console.log("time on server: " + this.timeRemaining);
+      // console.log("time on server: " + this.timeRemaining);
       if (this.timeRemaining === 0) {
         this.paused = true;
         this.interval = clearInterval(this.interval);
         this.finishedCallback();
       }
+      this.updateCallback();
     }, 1000);
   }
   pause() {

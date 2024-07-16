@@ -42,7 +42,7 @@ const Timer = ({ identifier }) => {
     <div className="outer-box">
       <h4>Time Remaining in Server {identifier}</h4>
       <div className={`timer-box ${paused ? "red" : ""}`}>
-        {timeRemaining ? (
+        {timeRemaining !== null ? (
           <div>
             {Math.floor(timeRemaining / 60)}
             <span className="special">:</span>
