@@ -16,9 +16,16 @@ const Timer = ({ identifier }) => {
       setPaused(paused);
     });
 
+    const onFocus = () => {
+      socket.emit(`get${identifier}`);
+    };
+
+    window.addEventListener("focus", onFocus);
+
     socket.emit(`get${identifier}`);
 
     return () => {
+      window.removeEventListener("focus", onFocus);
       socket.off(`update${identifier}`);
       socket.disconnect();
     };
@@ -44,10 +51,10 @@ const Timer = ({ identifier }) => {
       <div className={`timer-box ${paused ? "red" : ""}`}>
         {timeRemaining !== null ? (
           <div>
-            {Math.floor(timeRemaining / 60)}
+            {Math.max(0, Math.floor(timeRemaining / 60))}
             <span className="special">:</span>
             {timeRemaining % 60 < 10 ? "0" : ""}
-            {timeRemaining % 60}
+            {Math.max(0, timeRemaining % 60)}
           </div>
         ) : (
           <div></div>
