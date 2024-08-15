@@ -37,54 +37,64 @@ server.listen(SERVER_PORT, () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 });
 
-const controllers = new Map();
-controllers.set("1", new Controller("1"));
-controllers.set("2", new Controller("2"));
+try {
+  const controllers = new Map();
+  controllers.set("1", new Controller("1"));
+  controllers.set("2", new Controller("2"));
 
-const ref1 = new Bot(
-  controllers.get("1"),
-  process.env.DISCORD1_TOKEN,
-  process.env.DISCORD1_ID,
-  process.env.DISCORD1_CHANNEL_ID || null,
-  true
-);
+  const ref1 = new Bot(
+    controllers.get("1"),
+    process.env.DISCORD1_TOKEN,
+    process.env.DISCORD1_ID,
+    process.env.DISCORD1_CHANNEL_ID || null,
+    true,
+    process.env.DISCORD1_ROLE_ID || null
+  );
 
-const arm = new Bot(
-  controllers.get("1"),
-  process.env.DISCORD2_TOKEN,
-  process.env.DISCORD2_ID,
-  process.env.DISCORD2_CHANNEL_ID || null,
-  false
-);
+  const arm = new Bot(
+    controllers.get("1"),
+    process.env.DISCORD2_TOKEN,
+    process.env.DISCORD2_ID,
+    process.env.DISCORD2_CHANNEL_ID || null,
+    false,
+    null
+  );
 
-// const hug = new Bot(
-//   controllers.get("1"),
-//   process.env.DISCORD3_TOKEN,
-//   process.env.DISCORD3_ID,
-//   process.env.DISCORD3_CHANNEL_ID || null,
-//   false
-// );
+  const hug = new Bot(
+    controllers.get("1"),
+    process.env.DISCORD3_TOKEN,
+    process.env.DISCORD3_ID,
+    process.env.DISCORD3_CHANNEL_ID || null,
+    false,
+    null
+  );
 
-// const ref2 = new Bot(
-//   controllers.get("2"),
-//   process.env.DISCORD4_TOKEN,
-//   process.env.DISCORD4_ID,
-//   process.env.DISCORD4_CHANNEL_ID || null,
-//   true
-// );
+  const ref2 = new Bot(
+    controllers.get("2"),
+    process.env.DISCORD4_TOKEN,
+    process.env.DISCORD4_ID,
+    process.env.DISCORD4_CHANNEL_ID || null,
+    true,
+    process.env.DISCORD4_ROLE_ID || null
+  );
 
-// const ind = new Bot(
-//   controllers.get("2"),
-//   process.env.DISCORD5_TOKEN,
-//   process.env.DISCORD5_ID,
-//   process.env.DISCORD5_CHANNEL_ID || null,
-//   false
-// );
+  const ind = new Bot(
+    controllers.get("2"),
+    process.env.DISCORD5_TOKEN,
+    process.env.DISCORD5_ID,
+    process.env.DISCORD5_CHANNEL_ID || null,
+    false,
+    null
+  );
 
-// const long = new Bot(
-//   controllers.get("2"),
-//   process.env.DISCORD6_TOKEN,
-//   process.env.DISCORD6_ID,
-//   process.env.DISCORD6_CHANNEL_ID || null,
-//   false
-// );
+  const long = new Bot(
+    controllers.get("2"),
+    process.env.DISCORD6_TOKEN,
+    process.env.DISCORD6_ID,
+    process.env.DISCORD6_CHANNEL_ID || null,
+    false,
+    null
+  );
+} catch (error) {
+  console.log(error);
+}

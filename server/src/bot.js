@@ -12,11 +12,22 @@ const {
   AudioPlayerStatus,
 } = require("@discordjs/voice");
 const commandsExports = require("./commands");
-const { getTimerEmbed, getButtonController } = require("./gui");
+const {
+  getTimerEmbed,
+  getButtonController,
+  getLoggingEmbed,
+} = require("./gui");
 require("dotenv").config();
 
 class Bot {
-  constructor(controller, token, id, defaultChannelId, allowCommands) {
+  constructor(
+    controller,
+    token,
+    id,
+    defaultChannelId,
+    allowCommands,
+    allowedRollId
+  ) {
     this.controller = controller;
     this.controller.registerBot(this);
     this.token = token;
@@ -26,6 +37,7 @@ class Bot {
     this.loggingChannelId = process.env.LOGGING_CHANNEL_ID;
     this.loggingChannel = null;
     this.allowCommands = allowCommands;
+    this.allowedRollId = allowedRollId;
     this.voiceConnection = null;
     this.audioPlayer = createAudioPlayer();
 
@@ -53,6 +65,17 @@ class Bot {
     });
 
     this.client.on(Events.InteractionCreate, (interaction) => {
+      if (
+        !this.allowCommands ||
+        (this.allowedRollId &&
+          !interaction.member.roles.cache.has(this.allowedRollId))
+      ) {
+        interaction.reply({
+          content: "You do not have permission to do that",
+          ephemeral: true,
+        });
+        return;
+      }
       let command;
       if (interaction.isChatInputCommand()) {
         command = interaction.commandName;
@@ -108,11 +131,7 @@ class Bot {
       interaction,
       `Starting timer: Server ${this.controller.getIdentifier()}`
     );
-    this.log(
-      `${
-        interaction.member.nickname || interaction.user.globalName
-      } started timer on server ${this.controller.getIdentifier()}`
-    );
+    this.newLog(interaction, "Started Timer");
   }
 
   pauseCommand(interaction) {
@@ -121,11 +140,7 @@ class Bot {
       interaction,
       `Pausing timer: Server ${this.controller.getIdentifier()}`
     );
-    this.log(
-      `${
-        interaction.member.nickname || interaction.user.globalName
-      } paused timer on server ${this.controller.getIdentifier()}`
-    );
+    this.newLog(interaction, "Paused Timer");
   }
 
   endCommand(interaction) {
@@ -134,11 +149,7 @@ class Bot {
       interaction,
       `Ending timer: Server ${this.controller.getIdentifier()}`
     );
-    this.log(
-      `${
-        interaction.member.nickname || interaction.user.globalName
-      } ended timer on server ${this.controller.getIdentifier()}`
-    );
+    this.newLog(interaction, "Ended Timer");
   }
 
   resetCommand(interaction) {
@@ -147,11 +158,7 @@ class Bot {
       interaction,
       `Resetting timer: Server ${this.controller.getIdentifier()}`
     );
-    this.log(
-      `${
-        interaction.member.nickname || interaction.user.globalName
-      } reset timer on server ${this.controller.getIdentifier()}`
-    );
+    this.newLog(interaction, "Reset Timer");
   }
 
   setCommand(interaction) {
@@ -162,11 +169,7 @@ class Bot {
       interaction,
       `Setting timer: Server ${this.controller.getIdentifier()}`
     );
-    this.log(
-      `${
-        interaction.member.nickname || interaction.user.globalName
-      } set timer on server ${this.controller.getIdentifier()}`
-    );
+    this.newLog(interaction, "Set Timer");
   }
 
   joinCommand(interaction) {
@@ -175,11 +178,7 @@ class Bot {
       interaction,
       `Preparing bots for Server ${this.controller.getIdentifier()}`
     );
-    this.log(
-      `${
-        interaction.member.nickname || interaction.user.globalName
-      } initialized server ${this.controller.getIdentifier()} bots`
-    );
+    this.newLog(interaction, "Connected Bots");
   }
 
   leaveCommand(interaction) {
@@ -188,11 +187,7 @@ class Bot {
       interaction,
       `Disconnecting bots for Server ${this.controller.getIdentifier()}`
     );
-    this.log(
-      `${
-        interaction.member.nickname || interaction.user.globalName
-      } disconnected server ${this.controller.getIdentifier()} bots`
-    );
+    this.newLog(interaction, "Disconnected Bots");
   }
 
   async initialize() {
@@ -268,7 +263,6 @@ class Bot {
   }
 
   setEmbedToCurrentTime() {
-    this.embed.setTitle(`Timer - Server ${this.controller.getIdentifier()}`);
     this.embed.setDescription(
       `Time Remaining: ${this.controller.getTimeString()}`
     );
@@ -382,6 +376,27 @@ class Bot {
       await channel.send({ content: message });
     } catch (error) {
       console.log("Could not send log message");
+    }
+  }
+
+  async newLog(interaction, action) {
+    const channel = await this.getLoggingChannel();
+    if (!channel) {
+      return;
+    }
+    try {
+      await channel.send({
+        embeds: [
+          getLoggingEmbed(
+            this.controller.getIdentifier(),
+            action,
+            interaction.member.nickname || interaction.user.globalName,
+            interaction.user.avatarURL()
+          ),
+        ],
+      });
+    } catch (error) {
+      console.log(error);
     }
   }
 

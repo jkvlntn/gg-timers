@@ -7,9 +7,12 @@ const {
 require("dotenv").config();
 
 const getTimerEmbed = (identifier) => {
-  return new EmbedBuilder().setURL(
-    `${process.env.SERVER_URL}/server${identifier}`
-  );
+  const embed = new EmbedBuilder();
+  if (process.env.SERVER_URL) {
+    embed.setURL(`${process.env.SERVER_URL}/server${identifier}`);
+  }
+  embed.setTitle(`Timer - Server ${identifier}`);
+  return embed;
 };
 
 const getButtonController = () => {
@@ -33,4 +36,12 @@ const getButtonController = () => {
   );
 };
 
-module.exports = { getTimerEmbed, getButtonController };
+const getLoggingEmbed = (identifier, action, sender, picture) => {
+  return new EmbedBuilder()
+    .setTitle(action)
+    .setDescription(`Server ${identifier}`)
+    .setAuthor({ name: sender, iconURL: picture })
+    .setTimestamp();
+};
+
+module.exports = { getTimerEmbed, getButtonController, getLoggingEmbed };

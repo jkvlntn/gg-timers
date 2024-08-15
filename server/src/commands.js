@@ -16,6 +16,13 @@ const pauseCommand = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers);
 commandsExports.push(pauseCommand.toJSON());
 
+const endCommand = new SlashCommandBuilder()
+  .setName("end")
+  .setDescription("Ends the timer")
+  .setDMPermission(false)
+  .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers);
+commandsExports.push(endCommand.toJSON());
+
 const resetCommand = new SlashCommandBuilder()
   .setName("reset")
   .setDescription("Resets the timer")
