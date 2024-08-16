@@ -2,6 +2,7 @@ const {
   Client,
   Events,
   GatewayIntentBits,
+  PermissionsBitField,
   REST,
   Routes,
 } = require("discord.js");
@@ -68,7 +69,10 @@ class Bot {
       if (
         !this.allowCommands ||
         (this.allowedRollId &&
-          !interaction.member.roles.cache.has(this.allowedRollId))
+          !interaction.member.roles.cache.has(this.allowedRollId) &&
+          !interaction.member.permissions.has(
+            PermissionsBitField.Flags.Administrator
+          ))
       ) {
         interaction.reply({
           content: "You do not have permission to do that",
@@ -390,7 +394,9 @@ class Bot {
           getLoggingEmbed(
             this.controller.getIdentifier(),
             action,
-            interaction.member.nickname || interaction.user.globalName,
+            interaction.member.nickname ||
+              interaction.user.globalName ||
+              interaction.user.username,
             interaction.user.avatarURL()
           ),
         ],
