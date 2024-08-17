@@ -9,7 +9,7 @@ require("dotenv").config();
 const getTimerEmbed = (identifier) => {
   const embed = new EmbedBuilder();
   if (process.env.SERVER_URL) {
-    embed.setURL(`${process.env.SERVER_URL}/server${identifier}`);
+    embed.setURL(`${process.env.SERVER_URL}/server${identifier}?dark=1`);
   }
   embed.setTitle(`Timer - Server ${identifier}`);
   return embed;
