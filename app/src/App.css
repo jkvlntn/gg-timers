@@ -34,3 +34,8 @@
   padding-left: 10px;
   padding-right: 10px;
 }
+
+.dark-mode {
+  background-color: #282828;
+  color: white;
+}

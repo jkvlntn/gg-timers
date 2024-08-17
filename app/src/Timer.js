@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import io from "socket.io-client";
 
 const Timer = ({ identifier }) => {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [paused, setPaused] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const SERVER_URL = process.env.REACT_APP_SERVER_URL || "";
@@ -46,7 +48,11 @@ const Timer = ({ identifier }) => {
   }, [paused]);
 
   return (
-    <div className="outer-box">
+    <div
+      className={`outer-box ${
+        searchParams.get("dark") === "1" ? "dark-mode" : ""
+      }`}
+    >
       <h4>Time Remaining in Server {identifier}</h4>
       <div className={`timer-box ${paused ? "red" : ""}`}>
         {timeRemaining !== null ? (
